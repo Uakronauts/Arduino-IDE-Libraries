@@ -68,6 +68,7 @@ float GetRange(float* arr, unsigned int size)
 
 // Constructors
 
+// Base Constructor
 SoF::SoF(float* newAlt, float* newAccel, float* newGyro, float* newMag, float* newEuler, float* newQuat) {
   SetAltVar(newAlt);
   SetAccelArr(newAccel);
@@ -78,13 +79,52 @@ SoF::SoF(float* newAlt, float* newAccel, float* newGyro, float* newMag, float* n
 
   currentState = States::pad;
   deltaTime = (float)1.0 / LOOP_REFRESHRATE;
-  storedAccelDown = storedAccelZ;
+  storedAccelDown = storedAccelY;
+  isDownInverted = false;
 }
 
 SoF::SoF(float* newAlt, float* newAccel, float* newGyro, float* newMag, float* newEuler, float* newQuat, unsigned int newRefreshRateHz) {
-  LOOP_REFRESHRATE = newRefreshRateHz;
+  SetAltVar(newAlt);
+  SetAccelArr(newAccel);
+  SetGyroArr(newGyro);
+  SetMagArr(newMag);
+  SetEulerArr(newEuler);
+  SetQuatArr(newQuat);
 
-  SoF(newAlt, newAccel, newGyro, newMag, newEuler, newQuat);
+  currentState = States::pad;
+  LOOP_REFRESHRATE = newRefreshRateHz;
+  deltaTime = (float)1.0 / LOOP_REFRESHRATE;
+  storedAccelDown = storedAccelY;
+  isDownInverted = false;
+}
+
+SoF::SoF(float* newAlt, float* newAccel, float* newGyro, float* newMag, float* newEuler, float* newQuat, bool downInverted) {
+  SetAltVar(newAlt);
+  SetAccelArr(newAccel);
+  SetGyroArr(newGyro);
+  SetMagArr(newMag);
+  SetEulerArr(newEuler);
+  SetQuatArr(newQuat);
+
+  currentState = States::pad;
+  deltaTime = (float)1.0 / LOOP_REFRESHRATE;
+  storedAccelDown = storedAccelY;
+  isDownInverted = downInverted;
+}
+
+SoF::SoF(float* newAlt, float* newAccel, float* newGyro, float* newMag, float* newEuler, float* newQuat, bool downInverted, unsigned int newRefreshRateHz) {
+  SetAltVar(newAlt);
+  SetAccelArr(newAccel);
+  SetGyroArr(newGyro);
+  SetMagArr(newMag);
+  SetEulerArr(newEuler);
+  SetQuatArr(newQuat);
+
+  currentState = States::pad;
+  LOOP_REFRESHRATE = newRefreshRateHz;
+  deltaTime = (float)1.0 / LOOP_REFRESHRATE;
+  storedAccelDown = storedAccelY;
+  isDownInverted = downInverted;
 }
 
 //Refresh CMD
@@ -201,6 +241,16 @@ float SoF::recalculateDerivative(float* storageArr)
   return (storageArr[0] - storageArr[STORELEN - 1]) / ((float)STORELEN - 1.0 / LOOP_REFRESHRATE);
 }
 
+float SoF::conditionalInvertAccelDown(float accDown)
+{
+  if (!isDownInverted)
+  {
+    return accDown;
+  }
+
+  return accDown * -1; //invert accDown if isDownInverted is 1 (true)
+}
+
 // Setters
 void SoF::SetAltVar(float* newAlt) {
   altVar = newAlt;
@@ -224,6 +274,28 @@ void SoF::SetEulerArr(float* newEuler) {
 
 void SoF::SetQuatArr(float* newQuat) {
   quatArr = newQuat;
+}
+
+bool SoF::SetDownDir(unsigned int downDir)
+{
+  if (downDir > 2) {
+    return false;
+  }
+
+  else if (downDir == 0)
+  {
+    storedAccelDown = storedAccelX;
+  }
+  else if (downDir == 1)
+  {
+    storedAccelDown = storedAccelY;
+  }
+  else if (downDir == 2)
+  {
+    storedAccelDown = storedAccelZ;
+  }
+
+  return true;
 }
 
 // Getters
@@ -270,7 +342,7 @@ bool SoF::IsDescent() {
 bool SoF::IsOnPad() {
   if (IsStableState())
   {
-    float avgAccelDown = GetAvgValue(storedAccelDown, 5);
+    float avgAccelDown = conditionalInvertAccelDown(GetAvgValue(storedAccelDown, 5));
 
     if (avgAccelDown < 9.8 * ACCELDOWN_TOLERANCE_FACTOR &&
       avgAccelDown > 9.8 * (1 / ACCELDOWN_TOLERANCE_FACTOR))
@@ -286,8 +358,8 @@ bool SoF::IsBoost() {
   if (IsAscent())
   {
     // If accel down is > 1G, it is DEFINITELY boost... otherwise
-    if (storedAccelDown[0] > 9.8 * ACCELDOWN_TOLERANCE_FACTOR ||
-      GetAvgValue(storedAccelDown, 7) > 9.8 * ACCELDOWN_TOLERANCE_FACTOR)
+    if (conditionalInvertAccelDown(storedAccelDown[0]) > 9.8 * ACCELDOWN_TOLERANCE_FACTOR ||
+      conditionalInvertAccelDown(GetAvgValue(storedAccelDown, 7)) > 9.8 * ACCELDOWN_TOLERANCE_FACTOR)
     {
       return true;
     }

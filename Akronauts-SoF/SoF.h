@@ -59,6 +59,7 @@ private:
   // will be recalculated every (1 / LOOP_REFRESHRATE) seconds
   static const unsigned int STORELEN = 15;
   unsigned int LOOP_REFRESHRATE = 10; //set to 10 by default
+  bool isDownInverted;
 
   const float ALT_TOLERANCE_FACTOR = 1.0F;
   const float DER_ALT_ASCENT_TOLERANCE_FACTOR = 0.1F;
@@ -146,11 +147,15 @@ private:
 
   void DebugOutput();
   float recalculateDerivative(float*);  //Takes a storage array as arg and calculates a derivative with first and last data points. This will be garbage for the first STORELEN times.
+  float conditionalInvertAccelDown(float);
 
 public:
   // Constructors
   SoF(float* newAlt, float* newAccel, float* newGyro, float* newMag, float* newEuler, float* newQuat);
   SoF(float* newAlt, float* newAccel, float* newGyro, float* newMag, float* newEuler, float* newQuat, unsigned int newRefreshRateHz);
+  SoF(float* newAlt, float* newAccel, float* newGyro, float* newMag, float* newEuler, float* newQuat, bool downInverted);
+  SoF(float* newAlt, float* newAccel, float* newGyro, float* newMag, float* newEuler, float* newQuat, bool downInverted, unsigned int newRefreshRateHz);;
+
 
   // Destructors shouldn't be needed, should not dynamically allocate this object
 
@@ -165,6 +170,7 @@ public:
   void SetMagArr(float*);
   void SetEulerArr(float*);
   void SetQuatArr(float*);
+  bool SetDownDir(unsigned int);  //0:X, 1:Y, 2:Z
 
   // Getters
   States getState();
