@@ -117,7 +117,7 @@ bool Adafruit_LSM9DS1::begin() {
   // soft reset & reboot accel/gyro
   write8(XGTYPE, LSM9DS1_REGISTER_CTRL_REG8, 0x05);
 
-  delay(10);
+  //delay(10);
 
   uint8_t id = read8(XGTYPE, LSM9DS1_REGISTER_WHO_AM_I_XG);
   if (id != LSM9DS1_XG_ID)
